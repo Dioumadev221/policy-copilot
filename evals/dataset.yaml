@@ -1,0 +1,253 @@
+# Regression eval set. Run: python -m evals.run  (exits non-zero if a threshold is missed)
+# Each case pins the route; rule cases pin exact outputs, RAG cases pin the section that
+# must be retrieved and facts the answer must contain, refusal cases must be declined.
+
+thresholds:
+  route_accuracy: 0.95
+  rule_exact_match: 1.0     # guaranteed answers: anything below 100% fails the build
+  retrieval_hit_at_5: 0.9
+  answer_fact_recall: 0.85
+  refusal_accuracy: 0.85
+
+cases:
+  # ---------------------------------------------------------------- rules (guaranteed)
+  - id: leave-basic
+    q: "I started on 2021-03-15 and took 6 days off this year. What's my leave balance as of 2025-09-30?"
+    route: rule
+    rule: annual_leave_balance
+    result: {balance_days: 13.5}
+  - id: leave-part-time
+    q: "I joined on 2024-07-10, work part-time at 0.6 FTE and have taken 2 days. What is my PTO balance as of 2025-02-28?"
+    route: rule
+    rule: annual_leave_balance
+    result: {balance_days: 0.5}
+  - id: leave-carryover-senior
+    q: "I started on 2015-01-01, have 7 days carried over and took 3 days. What's my vacation balance as of 2025-03-31?"
+    route: rule
+    rule: annual_leave_balance
+    result: {balance_days: 9.0, carryover_days: 5}
+  - id: notice-ic
+    q: "I'm a software engineer who joined on 2023-02-01 and I resign on 2025-10-01. What is my notice period?"
+    route: rule
+    rule: notice_period
+    result: {notice_months: 2}
+  - id: notice-probation-manager
+    q: "I'm a manager, started on 2025-01-06. If I resign on 2025-05-01, what notice do I owe?"
+    route: rule
+    rule: notice_period
+    result: {notice_weeks: 2, on_probation: true}
+  - id: notice-executive
+    q: "I am a director who started on 2018-06-01. What's my notice period if I resign on 2025-06-02?"
+    route: rule
+    rule: notice_period
+    result: {notice_months: 6}
+  - id: notice-contract-prevails
+    q: "I'm an engineer who started on 2024-01-15 and my contract says 3 months notice. What is my notice period if I quit on 2025-03-01?"
+    route: rule
+    rule: notice_period
+    result: {notice_months: 3}
+  - id: overtime-holiday
+    q: "I worked 52 hours this week at $30/hour plus 8 hours on a public holiday. What is my pay?"
+    route: rule
+    rule: overtime_pay
+    result: {total_pay: 2160.0, overtime_pay: 960.0}
+  - id: overtime-simple
+    q: "I worked 45 hours this week and my hourly rate is $22. How much do I get paid?"
+    route: rule
+    rule: overtime_pay
+    result: {total_pay: 1017.5}
+  - id: overtime-exempt
+    q: "I'm salaried and worked 50 hours this week at $40/hour, do I get overtime?"
+    route: rule
+    rule: overtime_pay
+    result: {overtime_pay: 0.0, exempt: true}
+  - id: expense-meal-over-limit
+    q: "Can I expense a $95 dinner in Paris? I have the receipt."
+    route: rule
+    rule: expense_check
+    result: {status: partially_approved, reimbursable_amount: 75.0}
+  - id: expense-no-receipt
+    q: "I spent $40 on a taxi in Austin but lost the receipt. Will it be reimbursed?"
+    route: rule
+    rule: expense_check
+    result: {status: rejected}
+  - id: expense-pre-approval
+    q: "Can I claim a $1,500 hotel for 3 nights in Tokyo? It was not pre-approved."
+    route: rule
+    rule: expense_check
+    result: {status: needs_pre_approval}
+  - id: expense-hotel-tier2
+    q: "I paid $520 for 2 nights at a hotel in Berlin and I have the receipt. How much will I get back?"
+    route: rule
+    rule: expense_check
+    result: {status: partially_approved, reimbursable_amount: 360.0}
+  - id: expense-client-dinner
+    q: "Our client dinner for 4 people in London cost $430, I have the receipt. Can I expense it?"
+    route: rule
+    rule: expense_check
+    result: {status: approved, reimbursable_amount: 430.0}
+  - id: expense-late
+    q: "I want to claim a $60 lunch with receipt from 120 days ago. Can I get reimbursed?"
+    route: rule
+    rule: expense_check
+    result: {status: rejected}
+  - id: remote-remote-first
+    q: "I am a backend developer and I passed my probation, can I work remotely?"
+    route: rule
+    rule: remote_work_eligibility
+    result: {eligible: true, max_remote_days_per_week: 5}
+  - id: remote-onsite-role
+    q: "I'm a lab technician and I passed my probation. Can I work remotely?"
+    route: rule
+    rule: remote_work_eligibility
+    result: {eligible: false}
+  - id: remote-standard
+    q: "I am an accountant, I completed my probation and my rating meets expectations. How many days can I work from home?"
+    route: rule
+    rule: remote_work_eligibility
+    result: {eligible: true, max_remote_days_per_week: 3}
+  - id: remote-probation
+    q: "I'm a data analyst still on probation, can I work remotely?"
+    route: rule
+    rule: remote_work_eligibility
+    result: {eligible: false}
+  - id: remote-pip
+    q: "I am a designer, I passed probation but I'm on a PIP. Can I work remotely?"
+    route: rule
+    rule: remote_work_eligibility
+    result: {eligible: false}
+
+  # ---------------------------------------------------------------- missing input
+  - id: needs-start-date
+    q: "What's my leave balance? I took 4 days this year."
+    route: needs_input
+    missing: [start_date]
+  - id: needs-rate
+    q: "How much overtime pay do I get for working 50 hours this week?"
+    route: needs_input
+    missing: [hourly_rate]
+
+  # ---------------------------------------------------------------- RAG (generated, cited)
+  - id: rag-carryover
+    q: "How many days of annual leave can be carried over to next year?"
+    route: rag
+    section: "Carryover"
+    facts: ["5"]
+  - id: rag-hotel-london
+    q: "What is the hotel limit per night in London?"
+    route: rag
+    section: "Daily Limits by Category"
+    facts: ["300"]
+  - id: rag-secondary-caregiver
+    q: "How long is parental leave for the secondary caregiver?"
+    route: rag
+    section: "Secondary caregiver"
+    facts: ["6 weeks"]
+  - id: rag-primary-caregiver
+    q: "How many weeks of paid parental leave does the primary caregiver get?"
+    route: rag
+    section: "Primary caregiver"
+    facts: ["16 weeks"]
+  - id: rag-data-breach
+    q: "Who must a personal data breach be reported to, and how fast?"
+    route: rag
+    section: "Data Breaches"
+    facts: ["24 hours"]
+  - id: rag-medical-certificate
+    q: "When is a medical certificate required for sick leave?"
+    route: rag
+    section: "Sick Leave"
+    facts: ["4th"]
+  - id: rag-gifts
+    q: "What is the maximum value of a gift employees may accept from business partners?"
+    route: rag
+    section: "Gifts and Hospitality"
+    facts: ["50 USD"]
+  - id: rag-severance
+    q: "How is severance calculated in a restructuring?"
+    route: rag
+    section: "Severance"
+    facts: ["2 weeks"]
+  - id: rag-probation-length
+    q: "How long is the probation period for new hires?"
+    route: rag
+    section: "Probation Period"
+    facts: ["3 months"]
+  - id: rag-business-class
+    q: "Who approves business class flights?"
+    route: rag
+    section: "Flights and Trains"
+    facts: ["executive team"]
+  - id: rag-work-abroad
+    q: "How many days per year can employees work from another country?"
+    route: rag
+    section: "Working From Abroad"
+    facts: ["20 working days"]
+  - id: rag-home-office
+    q: "What is the home office allowance for remote employees?"
+    route: rag
+    section: "Equipment and Allowance"
+    facts: ["500 USD"]
+  - id: rag-max-hours
+    q: "What is the maximum number of hours that can be worked in a single week?"
+    route: rag
+    section: "Maximum Working Time"
+    facts: ["60 hours"]
+  - id: rag-on-call
+    q: "What is the on-call allowance per week?"
+    route: rag
+    section: "On-call Duty"
+    facts: ["150 USD"]
+  - id: rag-recruitment-retention
+    q: "How long is recruitment data of unsuccessful candidates retained?"
+    route: rag
+    section: "Data Retention"
+    facts: ["12 months"]
+  - id: rag-anonymous-report
+    q: "How can harassment be reported anonymously?"
+    route: rag
+    section: "Reporting Concerns"
+    facts: ["Ethics Hotline"]
+  - id: rag-bereavement
+    q: "How many days of bereavement leave are given for the death of a parent?"
+    route: rag
+    section: "Bereavement"
+    facts: ["5"]
+  - id: rag-expense-deadline
+    q: "Within how many days must expenses be submitted?"
+    route: rag
+    section: "General Principles"
+    facts: ["30 days"]
+  - id: rag-non-compete
+    q: "How long can a non-compete clause last?"
+    route: rag
+    section: "Non-compete"
+    facts: ["12 months"]
+  - id: rag-public-wifi
+    q: "Can public Wi-Fi be used for remote work?"
+    route: rag
+    section: "Security Requirements"
+    facts: ["VPN"]
+
+  # ---------------------------------------------------------------- out of scope: must refuse
+  - id: refuse-stock
+    q: "What is the company's stock option vesting schedule?"
+    route: refused
+  - id: refuse-dress-code
+    q: "What's the dress code?"
+    route: refused
+  - id: refuse-weather
+    q: "What is the weather in Paris?"
+    route: refused
+  - id: refuse-ceo-salary
+    q: "What is the CEO's salary?"
+    route: refused
+  - id: refuse-parking
+    q: "Is there free parking at the office?"
+    route: refused
+  - id: refuse-dog
+    q: "Can employees bring dogs to the office?"
+    route: refused
+  - id: refuse-401k
+    q: "What is the 401k employer match?"
+    route: refused

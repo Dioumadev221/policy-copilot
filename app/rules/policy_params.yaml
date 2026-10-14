@@ -1,0 +1,62 @@
+# Policy parameters used by the deterministic rules engine.
+# Single source of truth for every number the assistant guarantees. HR/Finance change a
+# value here (reviewed in a PR), the unit tests and evals pin the behaviour.
+# Each block cites the policy section it implements; citations are returned with answers.
+
+version: "2025.1"
+
+annual_leave:
+  source: 01-leave-policy.md
+  section: "Leave Policy > Annual Leave"
+  days_per_year_full_time: 25
+  seniority_bonus_every_years: 3
+  seniority_bonus_max_days: 3
+  carryover_cap_days: 5
+
+notice_period:
+  source: 02-employment-and-termination.md
+  section: "Employment Terms and Termination > Notice Periods > Standard notice"
+  probation_notice_weeks: 2
+  probation_months: {individual_contributor: 3, manager: 6, executive: 6}
+  # months of notice by level, for tenure buckets: [<2y, 2-5y, >5y]
+  months_by_level:
+    individual_contributor: [1, 2, 3]
+    manager: [2, 2, 3]
+    executive: [3, 3, 6]
+
+overtime:
+  source: 03-working-time-and-overtime.md
+  section: "Working Time and Overtime > Overtime Rates"
+  standard_weekly_hours: 40
+  tier1_until_hours: 48
+  tier1_multiplier: 1.25
+  tier2_multiplier: 1.5
+  public_holiday_multiplier: 2.0
+  max_hours_single_week: 60
+
+expenses:
+  source: 04-travel-and-expenses.md
+  section: "Travel and Expense Policy > Daily Limits by Category"
+  receipt_required_from: 25
+  pre_approval_above: 1000
+  submission_deadline_days: 90
+  tier1_cities: [new york, san francisco, london, paris, zurich, tokyo, singapore]
+  limits:
+    meals: {tier1: 75, tier2: 50}
+    hotel: {tier1: 300, tier2: 180}
+    ground_transport: {tier1: 80, tier2: 50}
+  client_entertainment_per_attendee: 120
+
+remote_work:
+  source: 05-remote-work.md
+  section: "Remote Work Policy > Eligibility"
+  onsite_roles: [lab technician, hardware test engineer, facilities, reception]
+  # remote-first job families, matched on keywords in the job title
+  remote_first_roles:
+    software engineering: [software, backend, frontend, full stack, fullstack, developer, devops, sre]
+    data: [data]
+    design: [design]
+    customer support: [support]
+  max_days_standard: 3
+  max_days_remote_first: 5
+  min_rating: meets

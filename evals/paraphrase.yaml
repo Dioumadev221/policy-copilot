@@ -1,0 +1,48 @@
+# Paraphrase set: questions that share almost no words with the policy text.
+# Lexical/offline mode is expected to refuse most of these (safe failure: no hallucination).
+# Semantic embeddings (EMBEDDING_PROVIDER=openai) are what make them answerable.
+thresholds:
+  retrieval_hit_at_5: 0.75
+  answer_fact_recall: 0.6
+
+cases:
+  - id: para-unused-vacation
+    q: "What happens to unused vacation days at the end of the year?"
+    route: rag
+    section: "Carryover"
+    facts: ["5"]
+  - id: para-mum
+    q: "How much time off do I get when my mum dies?"
+    route: rag
+    section: "Bereavement"
+    facts: ["5"]
+  - id: para-laptop
+    q: "I lost my laptop on the train, what should I do?"
+    route: rag
+    section: "Security Requirements"
+    facts: ["2 hours"]
+  - id: para-cash
+    q: "Is cash from a supplier ok to accept?"
+    route: rag
+    section: "Gifts and Hospitality"
+    facts: ["never"]
+  - id: para-new-baby
+    q: "My wife is having a baby, how long can I stay home with full pay as the second parent?"
+    route: rag
+    section: "Secondary caregiver"
+    facts: ["6 weeks"]
+  - id: para-doctor-note
+    q: "When do I need a doctor's note if I'm ill?"
+    route: rag
+    section: "Sick Leave"
+    facts: ["4th"]
+  - id: para-fired-misconduct
+    q: "Can someone be let go on the spot for stealing?"
+    route: rag
+    section: "Dismissal"
+    facts: ["immediately"]
+  - id: para-chatgpt
+    q: "Am I allowed to paste customer data into ChatGPT?"
+    route: rag
+    section: "Data Protection"
+    facts: ["unapproved AI tools"]

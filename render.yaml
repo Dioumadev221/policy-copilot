@@ -1,0 +1,21 @@
+# Render Blueprint: New > Blueprint > pick this repo. Database: use Neon (free, pgvector built in)
+# and paste its connection string into DATABASE_URL when Render asks.
+services:
+  - type: web
+    name: policy-copilot
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: LLM_PROVIDER
+        value: local
+      - key: EMBEDDING_PROVIDER
+        value: local
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: API_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: "1"
