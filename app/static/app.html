@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Policy Copilot</title>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<style>
+  @font-face { font-family: Inter; src: url(/static/fonts/inter.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: "JetBrains Mono"; src: url(/static/fonts/jetbrains-mono.woff2) format("woff2"); font-weight: 100 800; font-display: swap; }
+</style>
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --surface-2: #f9fafb; --text: #111827; --muted: #6b7280; --faint: #9ca3af;
+    --border: #e5e7eb; --brand: #4338ca; --brand-ink: #ffffff; --brand-soft: #eef2ff;
+    --ok: #047857; --ok-soft: #ecfdf5; --ok-line: #a7f3d0;
+    --info: #1d4ed8; --info-soft: #eff6ff; --info-line: #bfdbfe;
+    --warn: #b45309; --warn-soft: #fffbeb; --warn-line: #fde68a;
+    --bad: #b91c1c; --bad-soft: #fef2f2; --bad-line: #fecaca;
+    --code: #f3f4f6; --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0d12; --surface: #12151c; --surface-2: #171b24; --text: #e5e7eb; --muted: #9ca3af; --faint: #6b7280;
+      --border: #242a36; --brand: #818cf8; --brand-ink: #0b0d12; --brand-soft: #1e1b4b;
+      --ok: #34d399; --ok-soft: #062b20; --ok-line: #065f46;
+      --info: #93c5fd; --info-soft: #0c1a33; --info-line: #1e3a8a;
+      --warn: #fbbf24; --warn-soft: #2b1d05; --warn-line: #78350f;
+      --bad: #fca5a5; --bad-soft: #2b0c0c; --bad-line: #7f1d1d;
+      --code: #1b2030; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--brand); text-decoration: none; }
+  button { font: inherit; cursor: pointer; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; }
+
+  .shell { display: grid; grid-template-columns: 248px 1fr; height: 100vh; }
+  aside { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; font-weight: 700; font-size: 15px; }
+  .brand img { width: 28px; height: 28px; }
+  .ws { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; background: var(--surface-2); }
+  .ws .av { width: 28px; height: 28px; border-radius: 7px; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+  .ws small { display: block; color: var(--muted); font-size: 12px; }
+  .chip { font-size: 10.5px; font-weight: 600; color: var(--warn); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: 4px; padding: 0 5px; margin-left: 4px; white-space: nowrap; }
+  nav button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; background: none; color: var(--muted); border-radius: 8px; font-weight: 500; text-align: left; }
+  nav button:hover { background: var(--surface-2); color: var(--text); }
+  nav button.on { background: var(--brand-soft); color: var(--brand); }
+  nav svg { width: 18px; height: 18px; flex: none; }
+  .side-foot { margin-top: auto; padding: 10px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px; }
+
+  main { overflow: auto; display: flex; flex-direction: column; }
+  .banner { background: var(--warn-soft); color: var(--warn); border-bottom: 1px solid var(--warn-line); padding: 8px 24px; font-size: 13px; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 28px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  header.top h1 { margin: 0; font-size: 18px; }
+  header.top p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .view { padding: 24px 28px 40px; max-width: 1080px; width: 100%; }
+  .hidden { display: none !important; }
+
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 8px 14px; border-radius: 8px; font-weight: 500; }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .pill svg { width: 13px; height: 13px; }
+  .pill.rule { color: var(--ok); background: var(--ok-soft); border-color: var(--ok-line); }
+  .pill.rag { color: var(--info); background: var(--info-soft); border-color: var(--info-line); }
+  .pill.needs_input { color: var(--warn); background: var(--warn-soft); border-color: var(--warn-line); }
+  .pill.refused { color: var(--bad); background: var(--bad-soft); border-color: var(--bad-line); }
+
+  /* Ask */
+  #ask { display: flex; flex-direction: column; min-height: calc(100vh - 140px); }
+  .thread { flex: 1; display: flex; flex-direction: column; gap: 18px; padding-bottom: 20px; }
+  .empty { margin: 32px auto 8px; text-align: center; max-width: 620px; }
+  .empty h2 { font-size: 22px; margin: 10px 0 6px; }
+  .empty p { color: var(--muted); margin: 0 0 22px; }
+  .suggest { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+  .suggest button { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); text-align: left; box-shadow: var(--shadow); }
+  .suggest button:hover { border-color: var(--brand); }
+  .suggest small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; font-weight: 600; }
+  .q { align-self: flex-end; background: var(--brand); color: var(--brand-ink); padding: 10px 14px; border-radius: 14px 14px 4px 14px; max-width: 75%; }
+  .a { padding: 18px 20px; }
+  .a .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .a .meta { color: var(--faint); font-size: 12px; }
+  .a .text { font-size: 15.5px; line-height: 1.6; }
+  .cite { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin: 0 1px; border-radius: 6px; background: var(--brand-soft); color: var(--brand); font-size: 11.5px; font-weight: 700; border: 0; vertical-align: 1px; }
+  .sec { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .sec h4 { margin: 0 0 8px; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; display: flex; gap: 10px; padding: 5px 0; font-variant-numeric: tabular-nums; }
+  .steps li::before { content: counter(s); flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--ok-soft); color: var(--ok); font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+  .kv { display: flex; flex-wrap: wrap; gap: 6px; }
+  .kv span { background: var(--code); border-radius: 6px; padding: 3px 8px; }
+  .src { border: 1px solid var(--border); border-radius: 10px; margin-top: 8px; overflow: hidden; }
+  .src summary { list-style: none; cursor: pointer; padding: 9px 12px; display: flex; gap: 10px; align-items: center; }
+  .src summary::-webkit-details-marker { display: none; }
+  .src .doc { color: var(--muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
+  .src pre { margin: 0; padding: 12px; background: var(--surface-2); border-top: 1px solid var(--border); white-space: pre-wrap; font-family: inherit; font-size: 13px; color: var(--muted); }
+  .src.flash { border-color: var(--brand); }
+  .bar { height: 4px; width: 46px; border-radius: 2px; background: var(--border); overflow: hidden; flex: none; }
+  .bar i { display: block; height: 100%; background: var(--brand); }
+  .warns { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+  .composer { position: sticky; bottom: 0; padding: 14px 0 4px; background: linear-gradient(transparent, var(--bg) 30%); }
+  .composer form { display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 6px; box-shadow: var(--shadow); }
+  .composer input { flex: 1; min-width: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 15px; padding: 8px 10px; outline: none; }
+  .composer .hint { color: var(--faint); font-size: 12px; text-align: center; margin-top: 8px; }
+  .typing { color: var(--muted); font-size: 13px; }
+
+  /* tables, tiles */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface-2); }
+  tr:last-child td { border-bottom: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .tile { padding: 16px; }
+  .tile b { display: block; font-size: 26px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--muted); font-size: 12.5px; }
+  .row { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; }
+  .row h3 { margin: 0; font-size: 15px; }
+  .muted { color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .rule-card { padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .rule-card h3 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .rule-card p { margin: 0; color: var(--muted); font-size: 13px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fields label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  .fields input, .fields select, .inline input { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 7px; padding: 7px 9px; font: inherit; font-size: 13px; }
+  .result { background: var(--ok-soft); border: 1px solid var(--ok-line); color: var(--text); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .result.err { background: var(--bad-soft); border-color: var(--bad-line); }
+  .inline { display: flex; gap: 8px; }
+  .inline input { flex: 1; }
+
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    aside { flex-direction: row; align-items: center; padding: 8px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border); }
+    .brand { padding: 0 8px 0 0; } .ws, .side-foot, .brand span { display: none; }
+    nav { display: flex; gap: 4px; } nav button { width: auto; white-space: nowrap; }
+    .view, header.top { padding-left: 16px; padding-right: 16px; }
+    .tiles { grid-template-columns: 1fr 1fr; } .grid2, .suggest, .fields { grid-template-columns: 1fr; }
+    .q { max-width: 90%; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside>
+    <a class="brand" href="/"><img src="/static/logo.svg" alt=""><span>Policy Copilot</span></a>
+    <div class="ws"><div class="av" id="wsAv">HR</div><div><b id="wsName">Workspace</b><small id="wsSub">People &amp; Finance policies</small></div></div>
+    <nav id="nav">
+      <button data-view="ask" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Ask</button>
+      <button data-view="docs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Knowledge base</button>
+      <button data-view="rules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M14 10h2M8 14h2M14 14h2M8 18h2M14 18h2"/></svg>Rules</button>
+      <button data-view="activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Audit log</button>
+      <button data-view="api"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>API</button>
+    </nav>
+    <div class="side-foot"><span class="dot" id="hdot"></span><span id="health">Checking…</span><br><span id="engine" class="muted"></span></div>
+  </aside>
+
+  <main>
+    <header class="top"><div><h1 id="title">Ask</h1><p id="subtitle">Answers from your policies, calculations from your rules.</p></div>
+      <a class="btn" id="contact" href="#" target="_blank" rel="noopener">Deploy for your team</a></header>
+
+    <!-- ASK -->
+    <section class="view" id="ask">
+      <div class="thread" id="thread">
+        <div class="empty" id="empty">
+          <img src="/static/logo.svg" alt="" width="44" height="44">
+          <h2>What do you need to know?</h2>
+          <p>Policy questions are answered from your documents with sources. Leave, notice, overtime and expense questions are calculated exactly.</p>
+          <div class="suggest" id="suggest"></div>
+        </div>
+      </div>
+      <div class="composer">
+        <form id="askForm"><input id="q" autocomplete="off" placeholder="Ask about leave, notice periods, overtime, expenses, remote work…"><button class="btn primary" id="go">Ask</button></form>
+        <div class="hint">Every answer is logged with its sources for audit.</div>
+      </div>
+    </section>
+
+    <!-- DOCS -->
+    <section class="view hidden" id="docs">
+      <div class="row"><h3>Indexed documents</h3>
+        <div><input type="file" id="file" accept=".md,.txt,.pdf" class="hidden"><button class="btn primary" id="uploadBtn">Upload document</button></div></div>
+      <div class="card"><table><thead><tr><th>Document</th><th>Source file</th><th>Chunks</th><th>Indexed</th></tr></thead><tbody id="docRows"></tbody></table></div>
+      <div class="row" style="margin-top:28px"><h3>Retrieval inspector</h3><span class="muted">See exactly which passages the assistant would read, with scores.</span></div>
+      <form class="inline" id="searchForm"><input id="sq" placeholder="e.g. hotel limit in London"><button class="btn">Search</button></form>
+      <div id="searchOut" style="margin-top:12px"></div>
+    </section>
+
+    <!-- RULES -->
+    <section class="view hidden" id="rules">
+      <div class="row"><h3>Calculation rules</h3><span class="muted" id="paramsVersion"></span></div>
+      <div class="grid2" id="ruleCards"></div>
+    </section>
+
+    <!-- ACTIVITY -->
+    <section class="view hidden" id="activity">
+      <div class="tiles" id="tiles"></div>
+      <div class="row"><h3>Recent questions</h3><button class="btn" id="refresh">Refresh</button></div>
+      <div class="card"><table><thead><tr><th>Time</th><th>Question</th><th>Outcome</th><th>Latency</th></tr></thead><tbody id="actRows"></tbody></table></div>
+    </section>
+
+    <!-- API -->
+    <section class="view hidden" id="api">
+      <div class="card" style="padding:20px">
+        <h3 style="margin-top:0">Plug it into Slack, Teams or your HR portal</h3>
+        <p class="muted">Everything in this app is a REST endpoint. Full OpenAPI reference at <a href="/docs" target="_blank">/docs</a>.</p>
+        <pre class="mono" style="background:var(--code);padding:14px;border-radius:8px;white-space:pre-wrap" id="curl"></pre>
+        <table style="margin-top:12px">
+          <tr><td class="mono">POST /ask</td><td>Question in, answer with route, sources and calculation trace out</td></tr>
+          <tr><td class="mono">POST /rules/{name}/evaluate</td><td>Call a rule directly with JSON, no AI involved (payroll, HRIS)</td></tr>
+          <tr><td class="mono">POST /documents</td><td>Upload .md, .txt or .pdf (admin key)</td></tr>
+          <tr><td class="mono">GET /search</td><td>Retrieval debugging with scores</td></tr>
+          <tr><td class="mono">GET /activity, /stats</td><td>Audit log and usage metrics</td></tr>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const api = async (path, opts = {}) => {
+  const r = await fetch(path, opts);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(body.detail ? JSON.stringify(body.detail) : `HTTP ${r.status}`), { body });
+  return body;
+};
+const ICON = {
+  rule: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+  rag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  needs_input: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>',
+  refused: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>',
+};
+const LABEL = { rule: "Calculated · guaranteed", rag: "From your documents", needs_input: "Needs more detail", refused: "Not in your documents" };
+const VIEWS = {
+  ask: ["Ask", "Answers from your policies, calculations from your rules."],
+  docs: ["Knowledge base", "The documents the assistant is allowed to answer from."],
+  rules: ["Rules", "Calculations that must be exact. Same input, same answer, every time."],
+  activity: ["Audit log", "Every question, how it was answered, and how fast."],
+  api: ["API", "Use the assistant from your own tools."],
+};
+const SUGGEST = [
+  ["Leave balance", "I started on 2021-03-15 and took 6 days off this year. What's my leave balance as of 2025-09-30?"],
+  ["Overtime pay", "I worked 52 hours this week at $30/hour plus 8 hours on a public holiday. What is my pay?"],
+  ["Expense check", "Can I expense a $95 dinner in Paris? I have the receipt."],
+  ["Policy question", "How long is parental leave for the secondary caregiver?"],
+];
+
+/* ------------------------------------------------------------------ navigation */
+function show(view) {
+  for (const b of document.querySelectorAll("nav button")) b.classList.toggle("on", b.dataset.view === view);
+  for (const v of Object.keys(VIEWS)) $(v).classList.toggle("hidden", v !== view);
+  $("title").textContent = VIEWS[view][0]; $("subtitle").textContent = VIEWS[view][1];
+  history.replaceState(null, "", view === "ask" ? "/app" : `/app#${view}`);
+  ({ docs: loadDocs, rules: loadRules, activity: loadActivity, api: loadApi })[view]?.();
+}
+for (const b of document.querySelectorAll("nav button")) b.onclick = () => show(b.dataset.view);
+
+async function boot() {
+  try {
+    const m = await api("/meta");
+    $("wsName").textContent = m.workspace;
+    $("wsAv").textContent = m.workspace.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+    if (m.demo) $("wsSub").innerHTML = 'Demo · <span class="chip">Sample data</span>';
+    $("contact").href = m.contact_url;
+    $("engine").textContent = `${m.documents} documents · ${m.rules} rules · ${m.llm === "local" ? "offline" : m.llm}`;
+    const h = await api("/health");
+    $("health").textContent = h.status === "ok" ? "Operational" : "Degraded";
+  } catch { $("health").textContent = "Unreachable"; $("hdot").style.background = "var(--bad)"; }
+  for (const [label, q] of SUGGEST) {
+    const b = document.createElement("button");
+    b.innerHTML = `<small>${esc(label)}</small>${esc(q)}`;
+    b.onclick = () => ask(q);
+    $("suggest").appendChild(b);
+  }
+  show((location.hash || "#ask").slice(1) in VIEWS ? location.hash.slice(1) || "ask" : "ask");
+}
+
+/* ------------------------------------------------------------------ ask */
+$("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim(); if (q) ask(q); };
+let turn = 0;
+async function ask(q) {
+  $("empty")?.remove();
+  $("q").value = ""; $("go").disabled = true;
+  const t = $("thread");
+  t.insertAdjacentHTML("beforeend", `<div class="q">${esc(q)}</div>`);
+  const card = document.createElement("div");
+  card.className = "card a"; card.innerHTML = '<span class="typing">Checking policies and rules…</span>';
+  t.appendChild(card); card.scrollIntoView({ behavior: "smooth", block: "end" });
+  try { renderAnswer(card, await api("/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) }), ++turn); }
+  catch (err) { card.innerHTML = `<span class="pill refused">${ICON.refused}Error</span><p>${esc(err.message)}</p>`; }
+  finally { $("go").disabled = false; $("q").focus(); }
+}
+
+function renderAnswer(card, r, n) {
+  const text = esc(r.answer).replace(/\[(\d+)\]/g, (_, i) => `<button class="cite" data-src="${n}-${i}">${i}</button>`);
+  let h = `<div class="head"><span class="pill ${r.route}">${ICON[r.route]}${LABEL[r.route]}</span>
+    <span class="meta">${r.latency_ms} ms${r.rule ? ` · rule ${esc(r.rule.name)} · policy v${esc(r.rule.params_version)}` : ""}</span></div>
+    <div class="text">${text}</div>`;
+  if (r.rule) {
+    if (r.rule.warnings.length) h += `<div class="warns">${r.rule.warnings.map(esc).join("<br>")}</div>`;
+    h += `<div class="sec"><h4>How it was calculated</h4><ol class="steps">${r.rule.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`;
+    h += `<div class="sec"><h4>Inputs used</h4><div class="kv mono">${Object.entries(r.rule.inputs).map(([k, v]) => `<span>${esc(k)}: ${esc(v)}</span>`).join("")}</div>`;
+    if (r.rule.assumptions.length) h += `<p class="muted" style="font-size:12.5px;margin:10px 0 0">Defaults applied: ${r.rule.assumptions.map(esc).join("; ")}</p>`;
+    h += `</div>`;
+  }
+  if (r.missing_fields?.length) h += `<div class="sec"><h4>Missing</h4><div class="kv mono">${r.missing_fields.map((f) => `<span>${esc(f)}</span>`).join("")}</div></div>`;
+  if (r.citations.length) {
+    h += `<div class="sec"><h4>${r.route === "rule" ? "Policy implemented" : "Sources"}</h4>` + r.citations.map((c) => {
+      const parts = c.section.split(" > "); const rel = c.relevance != null ? Math.round(c.relevance * 100) : null;
+      return `<details class="src" id="src-${n}-${c.n}"${c.n === 1 && r.route === "rule" ? " open" : ""}><summary><span class="cite">${c.n}</span><b>${esc(parts.slice(1).join(" › ") || parts[0])}</b>
+        <span class="doc">${esc(c.title)}${rel != null ? ` · ${rel}% match` : ""}</span>${rel != null ? `<span class="bar"><i style="width:${Math.min(rel, 100)}%"></i></span>` : ""}</summary><pre>${esc(c.snippet)}</pre></details>`;
+    }).join("") + `</div>`;
+  }
+  card.innerHTML = h;
+  card.querySelectorAll("button.cite").forEach((b) => b.onclick = () => {
+    const d = $(`src-${b.dataset.src}`); if (!d) return;
+    d.open = true; d.classList.add("flash"); d.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => d.classList.remove("flash"), 1200);
+  });
+}
+
+/* ------------------------------------------------------------------ docs */
+async function loadDocs() {
+  const docs = await api("/documents");
+  $("docRows").innerHTML = docs.map((d) => `<tr><td><b>${esc(d.title)}</b></td><td class="mono muted">${esc(d.source)}</td><td>${d.chunks}</td><td class="muted">${new Date(d.created_at).toLocaleString()}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted">No documents yet.</td></tr>`;
+}
+$("uploadBtn").onclick = () => $("file").click();
+$("file").onchange = async () => {
+  const f = $("file").files[0]; if (!f) return;
+  const key = prompt("Admin key (X-API-Key) — leave empty if the server has none:") ?? "";
+  const fd = new FormData(); fd.append("file", f);
+  $("uploadBtn").disabled = true; $("uploadBtn").textContent = "Indexing…";
+  try { const r = await api("/documents", { method: "POST", body: fd, headers: key ? { "X-API-Key": key } : {} }); alert(`${r.title}: ${r.status}, ${r.chunks} chunks`); loadDocs(); }
+  catch (e) { alert(`Upload failed: ${e.message}`); }
+  finally { $("uploadBtn").disabled = false; $("uploadBtn").textContent = "Upload document"; $("file").value = ""; }
+};
+$("searchForm").onsubmit = async (e) => {
+  e.preventDefault(); const q = $("sq").value.trim(); if (!q) return;
+  const ps = await api(`/search?q=${encodeURIComponent(q)}&k=5`);
+  $("searchOut").innerHTML = `<div class="card"><table><thead><tr><th>#</th><th>Section</th><th>Relevance</th><th>Semantic</th><th>Ranks</th></tr></thead><tbody>${ps.map((p, i) => `<tr><td>${i + 1}</td><td><b>${esc(p.section_path)}</b><div class="muted" style="font-size:12.5px;margin-top:4px">${esc(p.content.slice(0, 180))}…</div></td><td class="mono">${p.relevance.toFixed(3)}</td><td class="mono">${p.vector_sim.toFixed(3)}</td><td class="mono muted">${Object.entries(p.ranks).map(([k, v]) => `${k} #${v}`).join("<br>")}</td></tr>`).join("")}</tbody></table></div>`;
+};
+
+/* ------------------------------------------------------------------ rules */
+async function loadRules() {
+  const r = await api("/rules");
+  $("paramsVersion").textContent = `Policy parameters v${r.params_version}`;
+  $("ruleCards").innerHTML = r.rules.map((rule) => {
+    const props = rule.input_schema.properties, req = new Set(rule.input_schema.required || []);
+    const fields = Object.entries(props).map(([k, p]) => {
+      const t = p.anyOf ? p.anyOf.find((x) => x.type !== "null") : p;
+      const label = `${esc(k.replaceAll("_", " "))}${req.has(k) ? " *" : ""}`;
+      if (t.enum) return `<label>${label}<select name="${k}">${t.enum.map((v) => `<option${v === p.default ? " selected" : ""}>${esc(v)}</option>`).join("")}</select></label>`;
+      if (t.type === "boolean") return `<label>${label}<select name="${k}" data-bool><option value="">default</option><option>true</option><option>false</option></select></label>`;
+      const type = t.format === "date" ? "date" : (t.type === "number" || t.type === "integer") ? "number" : "text";
+      return `<label>${label}<input name="${k}" type="${type}" step="any" placeholder="${p.default ?? ""}"></label>`;
+    }).join("");
+    return `<form class="card rule-card" data-rule="${rule.name}"><h3><span class="pill rule">${ICON.rule}Guaranteed</span>${esc(rule.title)}</h3><p>${esc(rule.description)}</p>
+      <div class="fields">${fields}</div><div><button class="btn primary">Run calculation</button></div><div class="out"></div></form>`;
+  }).join("");
+  document.querySelectorAll(".rule-card").forEach((f) => f.onsubmit = async (e) => {
+    e.preventDefault();
+    const body = {};
+    for (const el of f.querySelectorAll("input, select")) {
+      if (el.value === "") continue;
+      body[el.name] = el.dataset.bool !== undefined ? el.value === "true" : el.type === "number" ? Number(el.value) : el.value;
+    }
+    const out = f.querySelector(".out");
+    try { const r = await api(`/rules/${f.dataset.rule}/evaluate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      out.innerHTML = `<div class="result"><b>${esc(r.answer)}</b><ol class="steps" style="margin-top:8px">${r.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol></div>`; }
+    catch (err) { out.innerHTML = `<div class="result err">${esc((err.body?.detail || []).map?.((d) => `${d.loc.at(-1)}: ${d.msg}`).join("; ") || err.message)}</div>`; }
+  });
+}
+
+/* ------------------------------------------------------------------ activity */
+async function loadActivity() {
+  const [s, rows] = await Promise.all([api("/stats"), api("/activity?limit=50")]);
+  const by = Object.fromEntries(s.by_route.map((r) => [r.route, r]));
+  const pct = (k) => s.total ? Math.round(((by[k]?.n || 0) / s.total) * 100) + "%" : "–";
+  const p95 = Math.max(0, ...s.by_route.map((r) => r.p95_latency_ms || 0));
+  $("tiles").innerHTML = [
+    ["Questions answered", s.total], ["Calculated exactly", pct("rule")], ["Answered from documents", pct("rag")], ["Slowest 5% under", s.total ? `${p95} ms` : "–"],
+  ].map(([l, v]) => `<div class="card tile"><span>${l}</span><b>${v}</b></div>`).join("");
+  $("actRows").innerHTML = rows.map((r) => `<tr><td class="muted" style="white-space:nowrap">${new Date(r.created_at).toLocaleString()}</td><td>${esc(r.question)}</td>
+    <td><span class="pill ${r.route}">${ICON[r.route]}${LABEL[r.route]}</span></td><td class="mono">${r.latency_ms} ms</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted">No questions yet.</td></tr>`;
+}
+$("refresh").onclick = loadActivity;
+
+function loadApi() {
+  $("curl").textContent = `curl -X POST ${location.origin}/ask \\\n  -H "Content-Type: application/json" \\\n  -d '{"question": "Can I expense a $95 dinner in Paris? I have the receipt."}'`;
+}
+
+boot();
+</script>
+</body>
+</html>

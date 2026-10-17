@@ -1,6 +1,6 @@
 .PHONY: up down test eval eval-paraphrase dev
 
-up:            ## start Postgres + API on http://localhost:8000
+up:            ## start Postgres + API: site on http://localhost:8000, app on /app
 	docker compose up --build -d
 
 down:

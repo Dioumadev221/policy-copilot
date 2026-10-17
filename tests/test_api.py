@@ -74,3 +74,19 @@ def test_upload_is_idempotent_and_searchable(client):
 
 def test_stats_logs_every_answer(client):
     assert client.get("/stats").json()["total"] >= 4
+
+
+def test_landing_and_app_pages(client):
+    landing = client.get("/")
+    assert landing.status_code == 200 and "Policy Copilot" in landing.text
+    app_page = client.get("/app")
+    assert app_page.status_code == 200 and 'id="wsName"' in app_page.text
+    assert client.get("/static/logo.svg").status_code == 200
+
+
+def test_meta_and_activity(client):
+    meta = client.get("/meta").json()
+    assert meta["rules"] == 5 and meta["documents"] >= 6 and meta["params_version"]
+    client.post("/ask", json={"question": "How long is parental leave for the secondary caregiver?"})
+    rows = client.get("/activity", params={"limit": 3}).json()
+    assert 1 <= len(rows) <= 3 and {"question", "route", "latency_ms"} <= rows[0].keys()

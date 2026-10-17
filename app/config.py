@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     top_k: int = 5  # chunks passed to the generator
     min_relevance: float = 0.45  # below this the assistant refuses instead of guessing
 
+    # Branding shown in the web app
+    workspace_name: str = "Helios Robotics"
+    demo_mode: bool = True  # tags the workspace as "Sample data"
+    contact_url: str = "#"  # where "Talk to us" buttons point (your Upwork profile, Calendly...)
+
     api_key: str | None = None  # if set, write endpoints require the X-API-Key header
     seed_on_startup: bool = True
     seed_dir: str = "data/policies"

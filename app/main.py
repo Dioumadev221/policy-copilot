@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
 from app.assistant import AskResponse, ask
@@ -39,6 +40,9 @@ app = FastAPI(
 )
 
 
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+
 def require_key(x_api_key: str | None = Header(default=None)) -> None:
     expected = get_settings().api_key
     if expected and x_api_key != expected:
@@ -50,8 +54,35 @@ class AskRequest(BaseModel):
 
 
 @app.get("/", include_in_schema=False)
-def index() -> FileResponse:
-    return FileResponse(STATIC / "index.html")
+def landing() -> FileResponse:
+    return FileResponse(STATIC / "landing.html")
+
+
+@app.get("/app", include_in_schema=False)
+def web_app() -> FileResponse:
+    return FileResponse(STATIC / "app.html")
+
+
+@app.get("/meta")
+def meta() -> dict[str, Any]:
+    """Workspace info for the web app header."""
+    s = get_settings()
+    with pool().connection() as conn:
+        docs = conn.execute("SELECT count(*) AS n FROM documents").fetchone()["n"]
+    return {"workspace": s.workspace_name, "demo": s.demo_mode, "contact_url": s.contact_url,
+            "llm": s.llm_provider, "embeddings": s.embedding_provider, "documents": docs,
+            "rules": len(REGISTRY), "params_version": params()["version"]}
+
+
+@app.get("/activity")
+def activity(limit: int = 50) -> list[dict[str, Any]]:
+    """Most recent answers from the audit log."""
+    with pool().connection() as conn:
+        return conn.execute(
+            """SELECT id, question, route, rule_name, latency_ms, created_at
+               FROM query_log ORDER BY id DESC LIMIT %s""",
+            (min(max(limit, 1), 200),),
+        ).fetchall()
 
 
 @app.get("/health")

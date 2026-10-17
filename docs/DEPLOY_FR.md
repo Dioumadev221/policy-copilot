@@ -3,20 +3,13 @@
 Durée : environ 20 minutes. Résultat : une URL publique `https://policy-copilot-xxxx.onrender.com` à mettre
 dans ton portfolio Upwork, et un repo GitHub avec la CI verte.
 
-## 1. Pousser sur GitHub
+## 1. GitHub (déjà fait)
 
-1. Crée un repo **public** vide sur GitHub : `Dioumadev221/policy-copilot` (sans README, sans .gitignore).
-2. Dans le dossier du projet :
+Le code est sur https://github.com/Dioumadev221/policy-copilot.
 
-```bash
-git remote add origin https://github.com/Dioumadev221/policy-copilot.git
-git branch -M main
-git push -u origin main
-```
-
-3. Onglet **Actions** : le workflow `ci` lance les 51 tests et l'éval contre un vrai Postgres + pgvector.
+1. Onglet **Actions** : le workflow `ci` lance les 53 tests et l'éval contre un vrai Postgres + pgvector.
    Attends le ✓ vert : c'est une preuve que tu peux montrer à un client.
-4. Ajoute en description du repo : *"HR policy assistant: RAG (pgvector, hybrid search, citations) + deterministic rules engine. FastAPI, Docker, evals in CI."* et les topics `rag`, `fastapi`, `pgvector`, `llm`, `ai-agents`.
+2. Ajoute en description du repo : *"HR policy assistant: RAG (pgvector, hybrid search, citations) + deterministic rules engine. FastAPI, Docker, evals in CI."* et les topics `rag`, `fastapi`, `pgvector`, `llm`, `ai-agents`.
 
 ## 2. Base de données : Neon (gratuit, pgvector inclus)
 
@@ -29,9 +22,13 @@ git push -u origin main
 ## 3. API : Render (gratuit)
 
 1. https://render.com → Sign up avec GitHub → **New > Blueprint** → choisis `policy-copilot`.
-2. Render lit `render.yaml`. Il te demande `DATABASE_URL` : colle la string Neon. Laisse `OPENAI_API_KEY` vide pour l'instant.
+2. Render lit `render.yaml`. Il te demande :
+   - `DATABASE_URL` : colle la string Neon ;
+   - `CONTACT_URL` : l'URL de ton profil Upwork (tous les boutons "Talk to us" / "Deploy for your team" y mènent) ;
+   - `OPENAI_API_KEY` : laisse vide pour l'instant.
 3. **Apply**. Premier build : quelques minutes. Teste :
-   - `https://<ton-app>.onrender.com/` (l'interface)
+   - `https://<ton-app>.onrender.com/` (la landing page)
+   - `https://<ton-app>.onrender.com/app` (le produit)
    - `https://<ton-app>.onrender.com/docs` (Swagger)
    - `https://<ton-app>.onrender.com/health`
 
@@ -65,7 +62,18 @@ Ajuste `MIN_RELEVANCE` jusqu'à ce que les deux sets passent, et note les nouvea
 
 Avec Claude à la place : `LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY=...` (les embeddings restent OpenAI ou local).
 
-## 5. Sécurité
+## 5. Que ça ressemble à un produit en ligne
+
+- **Nom de domaine** (≈ 10 €/an, optionnel mais ça change tout) : achète par exemple `policycopilot.app` ou
+  `getpolicycopilot.com` chez Namecheap ou Cloudflare, puis Render > Settings > Custom Domains. HTTPS est automatique.
+- **Pas de veille pendant ta semaine de prospection** : passe le service en Starter (7 $/mois). Une démo qui
+  met 30 s à charger fait fuir le client.
+- **Données de démo** : `DEMO_MODE=true` affiche une étiquette discrète "Sample data" à côté de l'espace
+  Helios Robotics. Garde-la : les documents sont fictifs, et c'est la seule mention de démo dans le produit.
+- **Journal d'audit vivant** : pose toi-même une dizaine de questions variées dans `/app` après le
+  déploiement, pour que l'onglet Audit log ne soit pas vide quand un client l'ouvre.
+
+## 6. Sécurité
 
 `render.yaml` génère un `API_KEY` : l'upload et la suppression de documents exigent l'en-tête `X-API-Key`.
 Les questions (`/ask`) restent publiques pour la démo.
