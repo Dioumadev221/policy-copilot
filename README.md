@@ -6,7 +6,7 @@
 An AI assistant for HR, Finance and Compliance teams: cited answers from your handbook, exact calculations from a rules engine, and a full audit trail.</p>
 
 <p align="center">
-<a href="#run-it">Run it</a> · <a href="#evals-the-regression-gate">Quality gate</a> · <a href="#api">API</a> · <a href="docs/DEPLOY_FR.md">Deploy</a>
+<a href="https://policy-copilot-5s7n.onrender.com"><b>Live demo</b></a> · <a href="#run-it">Run it</a> · <a href="#evals-the-regression-gate">Quality gate</a> · <a href="#api">API</a> · <a href="docs/DEPLOY_FR.md">Deploy</a>
 </p>
 
 ![Policy Copilot: guaranteed calculation with steps and the policy it implements](app/static/img/answer-rule.png)

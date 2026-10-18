@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 
@@ -54,8 +54,12 @@ class AskRequest(BaseModel):
 
 
 @app.get("/", include_in_schema=False)
-def landing() -> FileResponse:
-    return FileResponse(STATIC / "landing.html")
+def landing() -> HTMLResponse:
+    html = (STATIC / "landing.html").read_text(encoding="utf-8")
+    if base := get_settings().public_url:
+        # Link previews (LinkedIn, Upwork, WhatsApp) need an absolute image URL.
+        html = html.replace('content="/static/', f'content="{base.rstrip("/")}/static/')
+    return HTMLResponse(html)
 
 
 @app.get("/app", include_in_schema=False)

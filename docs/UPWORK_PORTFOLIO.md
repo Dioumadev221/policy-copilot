@@ -34,7 +34,7 @@ All images are 2880x1800, in `app/static/img/` (and the landing shot in the deli
 4. `audit.png`: audit log with routing outcomes and latency
 5. `rules.png`: calculations available directly (also as an API for HRIS / payroll)
 6. `knowledge-base.png`: indexed documents and retrieval inspector
-7. Links: the live URL (`https://<your-domain>/`) and the GitHub repo
+7. Links: https://policy-copilot-5s7n.onrender.com (live product) and https://github.com/Dioumadev221/policy-copilot
 
 ## Longer case study (GitHub, LinkedIn, or a proposal attachment)
 
@@ -67,7 +67,7 @@ hallucinate" job, open with:
 
 > I run Policy Copilot, an assistant that splits questions into "answer from the documents, with
 > citations" and "calculate exactly with a rules engine", because a chatbot that guesses a number is a
-> liability. You can try it here: <URL>/app. For your project I'd start with the same split: which of
+> liability. You can try it here: https://policy-copilot-5s7n.onrender.com/app For your project I'd start with the same split: which of
 > your answers must be exact?
 
 Then ask one specific question about their data. Short proposals with a working link get answers.

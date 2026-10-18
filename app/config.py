@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,6 +40,8 @@ class Settings(BaseSettings):
     workspace_name: str = "Helios Robotics"
     demo_mode: bool = True  # tags the workspace as "Sample data"
     contact_url: str = "#"  # where "Talk to us" buttons point (your Upwork profile, Calendly...)
+    # Public base URL, used for absolute link-preview images. Render sets RENDER_EXTERNAL_URL itself.
+    public_url: str | None = Field(default=None, validation_alias=AliasChoices("public_url", "render_external_url"))
 
     api_key: str | None = None  # if set, write endpoints require the X-API-Key header
     seed_on_startup: bool = True

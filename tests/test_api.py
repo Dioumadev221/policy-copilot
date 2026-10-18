@@ -90,3 +90,9 @@ def test_meta_and_activity(client):
     client.post("/ask", json={"question": "How long is parental leave for the secondary caregiver?"})
     rows = client.get("/activity", params={"limit": 3}).json()
     assert 1 <= len(rows) <= 3 and {"question", "route", "latency_ms"} <= rows[0].keys()
+
+
+def test_landing_preview_image_is_absolute(client, monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "public_url", "https://demo.example.com/")
+    assert 'content="https://demo.example.com/static/img/answer-rule.png"' in client.get("/").text
